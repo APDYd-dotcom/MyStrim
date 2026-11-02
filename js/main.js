@@ -451,7 +451,10 @@ function openDoc(id) {
   if (onb2) {
     onb2.href = isSafeUrl(doc.url) ? doc.url : '#';
   }
-  var tqb = document.getElementById('takeQuizBtn');
+  var tqb = document.getElementById('docModalQuizBtn');
+  if (tqb) {
+    tqb.onclick = startQuiz;
+  }
   var noq = document.getElementById('noQuizNote');
   if (!doc.quiz || doc.quiz.length === 0) {
     if (tqb) {
@@ -827,9 +830,13 @@ function initUserView() {
   if (dmb) {
     dmb.addEventListener('click', closeDocModal);
   }
-  var tqb2 = document.getElementById('takeQuizBtn');
+  var closeBtns = document.querySelectorAll('[data-close="docModal"]');
+  for (var i = 0; i < closeBtns.length; i++) {
+    closeBtns[i].onclick = closeDocModal;
+  }
+  var tqb2 = document.getElementById('docModalQuizBtn');
   if (tqb2) {
-    tqb2.addEventListener('click', startQuiz);
+    tqb2.onclick = startQuiz;
   }
 }
 
