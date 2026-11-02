@@ -518,19 +518,34 @@ function renderQuiz() {
   if (!quiz) {
     return;
   }
-  var qp = document.getElementById('quizProgress');
-  if (qp) {
-    qp.textContent = 'Question ' + (quiz.index + 1) + ' of ' + quiz.questions.length;
+  var none = document.getElementById('quizNoneState');
+  if (none) {
+    none.classList.add('hidden');
+    none.classList.remove('flex');
+  }
+  var qstate = document.getElementById('quizQuestionState');
+  if (qstate) {
+    qstate.classList.remove('hidden');
+    qstate.classList.add('flex');
+  }
+  var rstate = document.getElementById('quizResultState');
+  if (rstate) {
+    rstate.classList.add('hidden');
+    rstate.classList.remove('flex');
+  }
+  var qc = document.getElementById('quizQuestionCounter');
+  if (qc) {
+    qc.textContent = 'Question ' + (quiz.index + 1) + ' of ' + quiz.questions.length;
   }
   var pct = ((quiz.index) / quiz.questions.length) * 100;
-  var qbar = document.getElementById('quizBar');
+  var qbar = document.getElementById('quizProgressBar');
   if (qbar) {
     qbar.style.width = pct + '%';
   }
   var q = quiz.questions[quiz.index];
-  var qq = document.getElementById('quizQuestion');
-  if (qq) {
-    qq.textContent = q.question;
+  var qt = document.getElementById('quizQuestionText');
+  if (qt) {
+    qt.textContent = q.question;
   }
   var optionsDiv = document.getElementById('quizOptions');
   if (!optionsDiv) {
@@ -539,7 +554,7 @@ function renderQuiz() {
   optionsDiv.innerHTML = '';
   for (var i = 0; i < q.options.length; i++) {
     var btn = document.createElement('button');
-    btn.className = 'quiz-option w-full text-left px-4 py-3 rounded-lg border border-line hover:bg-surface transition flex items-start gap-3';
+    btn.className = 'w-full text-left px-4 py-3 rounded-lg border border-line hover:bg-surface transition flex items-start gap-3';
     btn.innerHTML = '<span class="w-7 h-7 rounded-full bg-surface border border-line flex items-center justify-center text-sm font-medium flex-shrink-0">' + String.fromCharCode(65 + i) + '</span><span class="text-sm text-ink pt-0.5">' + escapeHtml(q.options[i]) + '</span>';
     btn.setAttribute('data-idx', i);
     btn.onclick = (function(idx, button) {
@@ -623,45 +638,55 @@ function showQuizResults() {
   var total = quiz.questions.length;
   var score = quiz.score;
   var pct = Math.round((score / total) * 100);
-  var qqr = document.getElementById('quizQuestion');
-  if (qqr) {
-    qqr.textContent = 'Results';
+  var qstate = document.getElementById('quizQuestionState');
+  if (qstate) {
+    qstate.classList.add('hidden');
+    qstate.classList.remove('flex');
   }
-  var qpr = document.getElementById('quizProgress');
-  if (qpr) {
-    qpr.textContent = score + ' of ' + total + ' correct';
+  var rstate = document.getElementById('quizResultState');
+  if (rstate) {
+    rstate.classList.remove('hidden');
+    rstate.classList.add('flex');
   }
-  var qbrr = document.getElementById('quizBar');
+  var qbrr = document.getElementById('quizProgressBar');
   if (qbrr) {
     qbrr.style.width = '100%';
   }
-  var optionsDiv = document.getElementById('quizOptions');
-  if (optionsDiv) {
-    optionsDiv.innerHTML = '';
-    var resultDiv = document.createElement('div');
-    resultDiv.className = 'text-center py-6';
+  var qrs = document.getElementById('quizResultScore');
+  if (qrs) {
+    qrs.textContent = pct + '%';
+  }
+  var qrl = document.getElementById('quizResultLabel');
+  if (qrl) {
+    qrl.textContent = 'You got ' + score + ' of ' + total + ' correct';
+  }
+  var iconWrap = document.getElementById('quizResultIconWrap');
+  if (iconWrap) {
     if (pct >= PASS_THRESHOLD) {
-      resultDiv.innerHTML = '<div class="w-16 h-16 rounded-full bg-ggreen-soft flex items-center justify-center mx-auto mb-3"><i data-lucide="trophy" class="w-8 h-8 text-ggreen"></i></div><div class="text-3xl font-bold text-ink">' + pct + '%</div><div class="text-sm text-sub mt-1">You got ' + score + ' of ' + total + ' correct</div>';
+      iconWrap.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-ggreen-soft';
+      iconWrap.innerHTML = '<i data-lucide="trophy" class="w-8 h-8 text-ggreen"></i>';
     } else {
-      resultDiv.innerHTML = '<div class="w-16 h-16 rounded-full bg-gred-soft flex items-center justify-center mx-auto mb-3"><i data-lucide="refresh-cw" class="w-8 h-8 text-gred"></i></div><div class="text-3xl font-bold text-ink">' + pct + '%</div><div class="text-sm text-sub mt-1">You got ' + score + ' of ' + total + ' correct</div>';
+      iconWrap.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-gred-soft';
+      iconWrap.innerHTML = '<i data-lucide="refresh-ccw" class="w-8 h-8 text-gred"></i>';
     }
-    optionsDiv.appendChild(resultDiv);
+  }
+  var coinsDiv = document.getElementById('quizResultCoins');
+  if (coinsDiv) {
+    coinsDiv.classList.add('hidden');
+  }
+  var retryNote = document.getElementById('quizResultRetryNote');
+  if (retryNote) {
+    retryNote.classList.add('hidden');
   }
   var qnb3 = document.getElementById('quizNextBtn');
   if (qnb3) {
     qnb3.classList.add('hidden');
   }
   var actionDiv = document.getElementById('quizActions');
-  if (!actionDiv) {
-    return;
+  if (actionDiv) {
+    actionDiv.innerHTML = '';
   }
-  actionDiv.innerHTML = '';
-  var user = getCurrentUser();
-  if (!user) {
-    closeModal('quizModal');
-    showView('auth');
-    return;
-  }
+  refreshIcons();
   if (pct >= PASS_THRESHOLD && user) {
     if (!quiz.coinAwarded) {
       var completed = user.completed || {};
@@ -679,20 +704,28 @@ function showQuizResults() {
         saveUsers(users);
         renderNavbar(user);
         bumpCoins(newCoins);
-        var banner = document.getElementById('coinEarnedBanner');
-        if (banner) {
-          banner.classList.remove('hidden');
-          setTimeout(function() {
-            banner.classList.add('hidden');
-          }, 3000);
-        }
         toast('+' + COIN_REWARD + ' coins earned', 'success');
         quiz.coinAwarded = true;
+        var coinsDiv = document.getElementById('quizResultCoins');
+        if (coinsDiv) {
+          coinsDiv.classList.remove('hidden');
+        }
       } else {
+        var coinsDiv2 = document.getElementById('quizResultCoins');
+        if (coinsDiv2) {
+          coinsDiv2.classList.add('hidden');
+        }
         var already = document.createElement('div');
         already.className = 'text-sm text-sub text-center mb-2';
         already.textContent = 'You already earned coins for this document.';
-        actionDiv.appendChild(already);
+        if (actionDiv) {
+          actionDiv.appendChild(already);
+        }
+      }
+    } else {
+      var coinsDiv3 = document.getElementById('quizResultCoins');
+      if (coinsDiv3) {
+        coinsDiv3.classList.add('hidden');
       }
     }
     if (!user.completed) {
@@ -1201,13 +1234,25 @@ function initModals() {
       modal.addEventListener('click', function(e) {
         if (e.target === modal) {
           if (id === 'quizModal') {
-            return;
+            if (state.quiz) {
+              return;
+            }
           }
           modal.classList.add('hidden');
           if (id === 'docModal') {
             var df = document.getElementById('docFrame');
             if (df) {
               df.src = 'about:blank';
+            }
+            var dfm = document.getElementById('docModalFrame');
+            if (dfm) {
+              dfm.src = 'about:blank';
+            }
+          }
+          if (id === 'quizModal') {
+            state.quiz = null;
+            if (state.view === 'user') {
+              renderDocGrid();
             }
           }
           var anyOpen = false;
@@ -1235,12 +1280,58 @@ function initModals() {
       if (qm) {
         qm.classList.add('hidden');
       }
+      state.quiz = null;
+      if (state.view === 'user') {
+        renderDocGrid();
+      }
       document.body.style.overflow = '';
     });
+  }
+  var closeQuiz = document.querySelectorAll('[data-close="quizModal"]');
+  for (var k = 0; k < closeQuiz.length; k++) {
+    closeQuiz[k].onclick = function() {
+      if (state.quiz) {
+        return;
+      }
+      var qm = document.getElementById('quizModal');
+      if (qm) {
+        qm.classList.add('hidden');
+      }
+      state.quiz = null;
+      if (state.view === 'user') {
+        renderDocGrid();
+      }
+      document.body.style.overflow = '';
+    };
   }
   var qnb4 = document.getElementById('quizNextBtn');
   if (qnb4) {
     qnb4.addEventListener('click', nextQuiz);
+  }
+  var qrb = document.getElementById('quizRetryBtn');
+  if (qrb) {
+    qrb.onclick = function() {
+      startQuiz();
+    };
+  }
+  var qdb = document.getElementById('quizDoneBtn');
+  if (qdb) {
+    qdb.onclick = function() {
+      var qm = document.getElementById('quizModal');
+      if (qm) {
+        qm.classList.add('hidden');
+      }
+      var ceb = document.getElementById('coinEarnedBanner');
+      if (ceb) {
+        ceb.classList.add('hidden');
+      }
+      state.quiz = null;
+      document.body.style.overflow = '';
+      if (state.view === 'user') {
+        renderDocGrid();
+      }
+      refreshIcons();
+    };
   }
 }
 
