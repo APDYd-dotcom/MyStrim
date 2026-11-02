@@ -885,7 +885,7 @@ function renderAdminTable() {
     if (a.volume > b.volume) return 1;
     return 0;
   });
-  var ae = document.getElementById('adminEmpty');
+  var ae = document.getElementById('adminEmptyState');
   if (docs.length === 0) {
     if (ae) {
       ae.classList.remove('hidden');
@@ -922,11 +922,17 @@ function initAdminView() {
       if (dfti) {
         dfti.value = '';
       }
-      var dfu = document.getElementById('docFormUrlInput');
+      var dfu = document.getElementById('docFormUrl');
+      if (!dfu) {
+        dfu = document.getElementById('docFormUrlInput');
+      }
       if (dfu) {
         dfu.value = '';
       }
-      var dfv = document.getElementById('docFormVolumeInput');
+      var dfv = document.getElementById('docFormVolume');
+      if (!dfv) {
+        dfv = document.getElementById('docFormVolumeInput');
+      }
       if (dfv) {
         dfv.value = '';
       }
@@ -939,6 +945,12 @@ function initAdminView() {
     dfc.addEventListener('click', function() {
       closeModal('docFormModal');
     });
+  }
+  var closeBtns = document.querySelectorAll('[data-close="docFormModal"]');
+  for (var i = 0; i < closeBtns.length; i++) {
+    closeBtns[i].onclick = function() {
+      closeModal('docFormModal');
+    };
   }
   var dfb = document.getElementById('docFormBackdrop');
   if (dfb) {
@@ -956,6 +968,13 @@ function initAdminView() {
   if (dfs) {
     dfs.addEventListener('click', saveDocForm);
   }
+  var dform = document.getElementById('docForm');
+  if (dform) {
+    dform.onsubmit = function(e) {
+      e.preventDefault();
+      saveDocForm();
+    };
+  }
 }
 
 function openEditDoc(id) {
@@ -972,11 +991,17 @@ function openEditDoc(id) {
   if (dfti2) {
     dfti2.value = doc.title;
   }
-  var dfu2 = document.getElementById('docFormUrlInput');
+  var dfu2 = document.getElementById('docFormUrl');
+  if (!dfu2) {
+    dfu2 = document.getElementById('docFormUrlInput');
+  }
   if (dfu2) {
     dfu2.value = doc.url;
   }
-  var dfv2 = document.getElementById('docFormVolumeInput');
+  var dfv2 = document.getElementById('docFormVolume');
+  if (!dfv2) {
+    dfv2 = document.getElementById('docFormVolumeInput');
+  }
   if (dfv2) {
     dfv2.value = doc.volume;
   }
@@ -986,8 +1011,17 @@ function openEditDoc(id) {
 
 function saveDocForm() {
   var dfti3 = document.getElementById('docFormTitleInput');
-  var dfu3 = document.getElementById('docFormUrlInput');
-  var dfv3 = document.getElementById('docFormVolumeInput');
+  if (!dfti3) {
+    dfti3 = document.getElementById('docFormTitleInput');
+  }
+  var dfu3 = document.getElementById('docFormUrl');
+  if (!dfu3) {
+    dfu3 = document.getElementById('docFormUrlInput');
+  }
+  var dfv3 = document.getElementById('docFormVolume');
+  if (!dfv3) {
+    dfv3 = document.getElementById('docFormVolumeInput');
+  }
   var title = dfti3 ? dfti3.value.trim() : '';
   var url = dfu3 ? dfu3.value.trim() : '';
   var volume = dfv3 ? dfv3.value.trim() : '';
