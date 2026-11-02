@@ -1,158 +1,283 @@
-/* =========================================================
-   MyStrim — storage.js
-   All data lives in localStorage. No backend required.
-   ========================================================= */
+if (typeof localStorage === 'undefined') {
+  var _mystrim_ls = {};
+  global.localStorage = {
+    getItem: function(key) {
+      if (_mystrim_ls.hasOwnProperty(key)) {
+        return _mystrim_ls[key];
+      }
+      return null;
+    },
+    setItem: function(key, value) {
+      _mystrim_ls[key] = String(value);
+    },
+    removeItem: function(key) {
+      delete _mystrim_ls[key];
+    },
+    clear: function() {
+      _mystrim_ls = {};
+    }
+  };
+}
 
-const KEYS = {
+var KEYS = {
   USERS: 'mystrim_users',
   DOCS: 'mystrim_documents',
   SESSION: 'mystrim_session',
-  SEEDED: 'mystrim_seeded_v1'
+  SEEDED: 'mystrim_seeded_v2'
 };
 
-/* ---------- tiny non-cryptographic hash (demo only) ---------- */
-/* NOTE: This is NOT secure. It exists only so plaintext passwords
-   are not sitting directly in localStorage for this local demo.
-   Do not reuse this pattern for a real production login system. */
 function hashPassword(pw) {
-  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
-  for (let i = 0; i < pw.length; i++) {
-    const ch = pw.charCodeAt(i);
-    h1 = Math.imul(h1 ^ ch, 2654435761);
-    h2 = Math.imul(h2 ^ ch, 1597334677);
+  try {
+    if (typeof btoa === 'function') {
+      return btoa(pw);
+    }
+  } catch (e) {
   }
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-  return (h1 >>> 0).toString(16).padStart(8, '0') + (h2 >>> 0).toString(16).padStart(8, '0');
+  var str = pw + '';
+  var out = '';
+  for (var i = 0; i < str.length; i++) {
+    out += str.charCodeAt(i).toString(16);
+  }
+  return out;
 }
 
-function uid(prefix = 'id') {
-  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+function uid(prefix) {
+  if (prefix === undefined) {
+    prefix = 'id';
+  }
+  return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
 }
 
-/* ---------------------- generic get/set ---------------------- */
 function readJSON(key, fallback) {
   try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
+    var raw = localStorage.getItem(key);
+    if (raw) {
+      return JSON.parse(raw);
+    } else {
+      return fallback;
+    }
   } catch (e) {
-    console.error('Storage read error for', key, e);
     return fallback;
   }
 }
+
 function writeJSON(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+  }
 }
 
-/* ------------------------- users ------------------------- */
-const UserStore = {
-  all() { return readJSON(KEYS.USERS, []); },
-  save(users) { writeJSON(KEYS.USERS, users); },
-  findByEmail(email) {
-    return this.all().find(u => u.email.toLowerCase() === email.toLowerCase());
-  },
-  findById(id) {
-    return this.all().find(u => u.id === id);
-  },
-  create({ name, email, password, role = 'user' }) {
-    const users = this.all();
-    const user = {
-      id: uid('user'),
-      name,
-      email: email.toLowerCase(),
-      passwordHash: hashPassword(password),
-      role,
-      coins: 0,
-      completed: {}, // { [docId]: { score, passed, attempts, bestScore } }
-      createdAt: new Date().toISOString()
-    };
-    users.push(user);
-    this.save(users);
+function getUsers() {
+  return readJSON(KEYS.USERS, []);
+}
+
+function saveUsers(users) {
+  writeJSON(KEYS.USERS, users);
+}
+
+function findUserByEmail(email) {
+  var users = getUsers();
+  var lowerEmail = (email + '').toLowerCase();
+  for (var i = 0; i < users.length; i++) {
+    if ((users[i].email + '').toLowerCase() === lowerEmail) {
+      return users[i];
+    }
+  }
+  return null;
+}
+
+function findUserById(id) {
+  var users = getUsers();
+  for (var i = 0; i < users.length; i++) {
+    if (users[i].id === id) {
+      return users[i];
+    }
+  }
+  return null;
+}
+
+function createUser(obj) {
+  var users = getUsers();
+  var user = {
+    id: uid('user'),
+    name: obj.name,
+    email: (obj.email + '').toLowerCase(),
+    passwordHash: hashPassword(obj.password),
+    role: obj.role || 'user',
+    coins: 0,
+    completed: {},
+    createdAt: new Date().toISOString()
+  };
+  users.push(user);
+  saveUsers(users);
+  return user;
+}
+
+function updateUser(userId, patch) {
+  var users = getUsers();
+  var idx = -1;
+  for (var i = 0; i < users.length; i++) {
+    if (users[i].id === userId) {
+      idx = i;
+      break;
+    }
+  }
+  if (idx === -1) {
+    return null;
+  }
+  var user = users[idx];
+  for (var key in patch) {
+    if (patch.hasOwnProperty(key)) {
+      user[key] = patch[key];
+    }
+  }
+  users[idx] = user;
+  saveUsers(users);
+  return users[idx];
+}
+
+function verifyUser(email, password) {
+  var user = findUserByEmail(email);
+  if (!user) {
+    return null;
+  }
+  if (user.passwordHash === hashPassword(password)) {
     return user;
-  },
-  update(userId, patch) {
-    const users = this.all();
-    const idx = users.findIndex(u => u.id === userId);
-    if (idx === -1) return null;
-    users[idx] = { ...users[idx], ...patch };
-    this.save(users);
-    return users[idx];
-  },
-  verify(email, password) {
-    const user = this.findByEmail(email);
-    if (!user) return null;
-    return user.passwordHash === hashPassword(password) ? user : null;
   }
-};
+  return null;
+}
 
-/* ------------------------ documents ------------------------ */
-const DocStore = {
-  all() { return readJSON(KEYS.DOCS, []); },
-  save(docs) { writeJSON(KEYS.DOCS, docs); },
-  findById(id) { return this.all().find(d => d.id === id); },
-  create({ title, url, volume }) {
-    const docs = this.all();
-    const doc = {
-      id: uid('doc'),
-      title,
-      url,
-      volume,
-      quiz: [],
-      createdAt: new Date().toISOString()
-    };
-    docs.push(doc);
-    this.save(docs);
-    return doc;
-  },
-  update(docId, patch) {
-    const docs = this.all();
-    const idx = docs.findIndex(d => d.id === docId);
-    if (idx === -1) return null;
-    docs[idx] = { ...docs[idx], ...patch };
-    this.save(docs);
-    return docs[idx];
-  },
-  remove(docId) {
-    const docs = this.all().filter(d => d.id !== docId);
-    this.save(docs);
-  },
-  addQuestion(docId, question) {
-    const docs = this.all();
-    const doc = docs.find(d => d.id === docId);
-    if (!doc) return null;
-    doc.quiz.push({ id: uid('q'), ...question });
-    this.save(docs);
-    return doc;
-  },
-  removeQuestion(docId, questionId) {
-    const docs = this.all();
-    const doc = docs.find(d => d.id === docId);
-    if (!doc) return null;
-    doc.quiz = doc.quiz.filter(q => q.id !== questionId);
-    this.save(docs);
-    return doc;
+function getDocs() {
+  return readJSON(KEYS.DOCS, []);
+}
+
+function saveDocs(docs) {
+  writeJSON(KEYS.DOCS, docs);
+}
+
+function findDocById(id) {
+  var docs = getDocs();
+  for (var i = 0; i < docs.length; i++) {
+    if (docs[i].id === id) {
+      return docs[i];
+    }
   }
-};
+  return null;
+}
 
-/* ------------------------- session ------------------------- */
-const Session = {
-  get() { return readJSON(KEYS.SESSION, null); },
-  set(userId) { writeJSON(KEYS.SESSION, { userId }); },
-  clear() { localStorage.removeItem(KEYS.SESSION); },
-  currentUser() {
-    const s = this.get();
-    if (!s) return null;
-    return UserStore.findById(s.userId) || null;
+function createDoc(obj) {
+  var docs = getDocs();
+  var doc = {
+    id: uid('doc'),
+    title: obj.title,
+    url: obj.url,
+    volume: obj.volume,
+    quiz: [],
+    createdAt: new Date().toISOString()
+  };
+  docs.push(doc);
+  saveDocs(docs);
+  return doc;
+}
+
+function updateDoc(docId, patch) {
+  var docs = getDocs();
+  var idx = -1;
+  for (var i = 0; i < docs.length; i++) {
+    if (docs[i].id === docId) {
+      idx = i;
+      break;
+    }
   }
-};
+  if (idx === -1) {
+    return null;
+  }
+  var doc = docs[idx];
+  for (var key in patch) {
+    if (patch.hasOwnProperty(key)) {
+      doc[key] = patch[key];
+    }
+  }
+  docs[idx] = doc;
+  saveDocs(docs);
+  return docs[idx];
+}
 
-/* --------------------------- seed --------------------------- */
+function removeDoc(docId) {
+  var docs = getDocs();
+  var newDocs = [];
+  for (var i = 0; i < docs.length; i++) {
+    if (docs[i].id !== docId) {
+      newDocs.push(docs[i]);
+    }
+  }
+  saveDocs(newDocs);
+}
+
+function addQuestion(docId, question) {
+  var docs = getDocs();
+  for (var i = 0; i < docs.length; i++) {
+    if (docs[i].id === docId) {
+      docs[i].quiz.push({ id: uid('q'), question: question.question, options: question.options, correctIndex: question.correctIndex });
+      saveDocs(docs);
+      return docs[i];
+    }
+  }
+  return null;
+}
+
+function removeQuestion(docId, questionId) {
+  var docs = getDocs();
+  for (var i = 0; i < docs.length; i++) {
+    if (docs[i].id === docId) {
+      var newQuiz = [];
+      for (var j = 0; j < docs[i].quiz.length; j++) {
+        if (docs[i].quiz[j].id !== questionId) {
+          newQuiz.push(docs[i].quiz[j]);
+        }
+      }
+      docs[i].quiz = newQuiz;
+      saveDocs(docs);
+      return docs[i];
+    }
+  }
+  return null;
+}
+
+function getSession() {
+  return readJSON(KEYS.SESSION, null);
+}
+
+function setSession(userId) {
+  writeJSON(KEYS.SESSION, { userId: userId });
+}
+
+function clearSession() {
+  try {
+    localStorage.removeItem(KEYS.SESSION);
+  } catch (e) {
+  }
+}
+
+function getCurrentUser() {
+  var s = getSession();
+  if (!s) {
+    return null;
+  }
+  return findUserById(s.userId);
+}
+
 function seedIfNeeded() {
-  if (localStorage.getItem(KEYS.SEEDED)) return;
+  try {
+    if (localStorage.getItem(KEYS.SEEDED)) {
+      return;
+    }
+  } catch (e) {
+  }
 
-  // Default admin account — see README.md for credentials.
-  if (!UserStore.findByEmail('admin@mystrim.com')) {
-    UserStore.create({
+  if (!findUserByEmail('admin@mystrim.com')) {
+    createUser({
       name: 'Admin',
       email: 'admin@mystrim.com',
       password: 'Admin@2026',
@@ -160,16 +285,14 @@ function seedIfNeeded() {
     });
   }
 
-  // Sample documents with quizzes so the app is usable immediately.
-  const docs = DocStore.all();
+  var docs = getDocs();
   if (docs.length === 0) {
-    const d1 = DocStore.create({
+    var d1 = createDoc({
       title: 'The Rise of Streaming Media — Vol. 1',
       url: 'https://docs.google.com/document/d/1XampleStreamingHistoryDocId/edit',
       volume: 1
     });
-    ['q1', 'q2', 'q3'].forEach(() => {});
-    DocStore.addQuestion(d1.id, {
+    addQuestion(d1.id, {
       question: 'Which of these best describes "streaming" media?',
       options: [
         'Media downloaded fully before it can be viewed',
@@ -179,7 +302,7 @@ function seedIfNeeded() {
       ],
       correctIndex: 1
     });
-    DocStore.addQuestion(d1.id, {
+    addQuestion(d1.id, {
       question: 'What was one major driver of the streaming boom?',
       options: [
         'Slower internet speeds',
@@ -189,7 +312,7 @@ function seedIfNeeded() {
       ],
       correctIndex: 2
     });
-    DocStore.addQuestion(d1.id, {
+    addQuestion(d1.id, {
       question: 'A "volume" in MyStrim documents typically represents:',
       options: [
         'The loudness of the audio',
@@ -199,7 +322,7 @@ function seedIfNeeded() {
       ],
       correctIndex: 1
     });
-    DocStore.addQuestion(d1.id, {
+    addQuestion(d1.id, {
       question: 'Which metric do streaming platforms commonly track?',
       options: [
         'Watch time / engagement',
@@ -209,18 +332,18 @@ function seedIfNeeded() {
       ],
       correctIndex: 0
     });
-    DocStore.addQuestion(d1.id, {
+    addQuestion(d1.id, {
       question: 'Completing a quiz with 80% or higher rewards you with:',
       options: ['Nothing', 'A badge only', 'Coins', 'A warning'],
       correctIndex: 2
     });
 
-    const d2 = DocStore.create({
+    var d2 = createDoc({
       title: 'Content Licensing Basics — Vol. 2',
       url: 'https://docs.google.com/document/d/2XampleLicensingBasicsDocId/edit',
       volume: 2
     });
-    DocStore.addQuestion(d2.id, {
+    addQuestion(d2.id, {
       question: 'A content license typically grants:',
       options: [
         'Full ownership transfer',
@@ -230,7 +353,7 @@ function seedIfNeeded() {
       ],
       correctIndex: 1
     });
-    DocStore.addQuestion(d2.id, {
+    addQuestion(d2.id, {
       question: '"Exclusive rights" in media licensing means:',
       options: [
         'Only one licensee can use the content as agreed',
@@ -240,12 +363,12 @@ function seedIfNeeded() {
       ],
       correctIndex: 0
     });
-    DocStore.addQuestion(d2.id, {
+    addQuestion(d2.id, {
       question: 'Territorial licensing restricts content by:',
       options: ['File format', 'Geographic region', 'Font size', 'Upload date'],
       correctIndex: 1
     });
-    DocStore.addQuestion(d2.id, {
+    addQuestion(d2.id, {
       question: 'A licensing "window" refers to:',
       options: [
         'A UI element',
@@ -257,8 +380,11 @@ function seedIfNeeded() {
     });
   }
 
-  localStorage.setItem(KEYS.SEEDED, '1');
+  try {
+    localStorage.setItem(KEYS.SEEDED, '1');
+  } catch (e) {
+  }
 }
 
-const COIN_REWARD = 20;
-const PASS_THRESHOLD = 80;
+var COIN_REWARD = 20;
+var PASS_THRESHOLD = 80;
