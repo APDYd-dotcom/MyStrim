@@ -134,3 +134,12 @@ the embedded viewer to actually render, the document must be shared as
 - All application code is plain, dependency-free JavaScript (ES2017+).
 - Tested end-to-end (registration, login, document CRUD, quiz authoring,
   quiz-taking, coin awarding, and repeat-attempt handling) before delivery.
+
+---
+
+## 6. Notes on the JavaScript rewrite
+
+- The JavaScript uses simple beginner-friendly code with global functions, no modules/classes.
+- After updating, clear localStorage once (`localStorage.clear()`) because old accounts use the old hash.
+
+The two sample documents use placeholder links, so their preview will not load. Replace them with your own links from Admin -> Edit.
