@@ -141,3 +141,5 @@ the embedded viewer to actually render, the document must be shared as
 
 - The JavaScript uses simple beginner-friendly code with global functions, no modules/classes.
 - After updating, clear localStorage once (`localStorage.clear()`) because old accounts use the old hash.
+
+The two sample documents use placeholder links, so their preview will not load. Replace them with your own links from Admin -> Edit.

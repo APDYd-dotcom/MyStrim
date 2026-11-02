@@ -7,6 +7,14 @@ var state = {
   manageDocId: null
 };
 
+function isSafeUrl(url) {
+  return /^https?:\/\//i.test(String(url).trim());
+}
+
+function escapeAttr(str) {
+  return escapeHtml(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function escapeHtml(text) {
   if (text === undefined || text === null) {
     return '';
@@ -41,6 +49,22 @@ function closeModal(id) {
   var modal = document.getElementById(id);
   if (modal) {
     modal.classList.add('hidden');
+  }
+  if (id === 'docModal') {
+    var dfm = document.getElementById('docFrame');
+    if (dfm) {
+      dfm.src = 'about:blank';
+    }
+    var dfm2 = document.getElementById('docModalFrame');
+    if (dfm2) {
+      dfm2.src = 'about:blank';
+    }
+  }
+  if (id === 'quizModal') {
+    state.quiz = null;
+    if (state.view === 'user') {
+      renderDocGrid();
+    }
   }
   var anyOpen = false;
   var modals = ['docModal', 'quizModal', 'docFormModal', 'quizManageModal', 'confirmModal'];
@@ -410,14 +434,22 @@ function openDoc(id) {
   var preview = getDocPreviewUrl(doc.url);
   var df = document.getElementById('docFrame');
   if (df) {
-    df.src = preview;
+    df.src = isSafeUrl(doc.url) ? preview : 'about:blank';
+  }
+  var dfm = document.getElementById('docModalFrame');
+  if (dfm) {
+    dfm.src = isSafeUrl(doc.url) ? preview : 'about:blank';
   }
   var parts = (doc.url + '').split('/d/');
   var docIdPart = parts.length > 1 ? parts[1].split('/')[0] : '';
   var openUrl = 'https://docs.google.com/document/d/' + docIdPart + '/edit';
   var onb = document.getElementById('docOpenNewTab');
   if (onb) {
-    onb.href = openUrl;
+    onb.href = isSafeUrl(doc.url) ? openUrl : '#';
+  }
+  var onb2 = document.getElementById('docModalOpenLink');
+  if (onb2) {
+    onb2.href = isSafeUrl(doc.url) ? doc.url : '#';
   }
   var tqb = document.getElementById('takeQuizBtn');
   var noq = document.getElementById('noQuizNote');
@@ -579,6 +611,12 @@ function showQuizResults() {
   if (!quiz) {
     return;
   }
+  var user = getCurrentUser();
+  if (!user) {
+    closeModal('quizModal');
+    showView('auth');
+    return;
+  }
   var total = quiz.questions.length;
   var score = quiz.score;
   var pct = Math.round((score / total) * 100);
@@ -616,6 +654,11 @@ function showQuizResults() {
   }
   actionDiv.innerHTML = '';
   var user = getCurrentUser();
+  if (!user) {
+    closeModal('quizModal');
+    showView('auth');
+    return;
+  }
   if (pct >= PASS_THRESHOLD && user) {
     if (!quiz.coinAwarded) {
       var completed = user.completed || {};
@@ -820,7 +863,7 @@ function renderAdminTable() {
     var docIdPart = parts.length > 1 ? parts[1].split('/')[0] : '';
     var link = 'https://docs.google.com/document/d/' + docIdPart + '/edit';
     var qCount = doc.quiz ? doc.quiz.length : 0;
-    tr.innerHTML = '<td class="px-4 py-3 text-sm text-ink">' + escapeHtml(doc.title) + '</td><td class="px-4 py-3 text-sm text-sub">' + escapeHtml(doc.volume) + '</td><td class="px-4 py-3 text-sm text-sub">' + qCount + '</td><td class="px-4 py-3 text-sm"><a href="' + escapeHtml(link) + '" target="_blank" class="text-gblue hover:underline">Open</a></td><td class="px-4 py-3 text-sm text-right"><button onclick="openEditDoc(\'' + escapeHtml(doc.id) + '\')" class="text-gblue hover:underline mr-2">Edit</button><button onclick="openManageQuiz(\'' + escapeHtml(doc.id) + '\')" class="text-gblue hover:underline mr-2">Quiz</button><button onclick="openConfirmDelete(\'' + escapeHtml(doc.id) + '\')" class="text-gred hover:underline">Delete</button></td>';
+    tr.innerHTML = '<td class="px-4 py-3 text-sm text-ink">' + escapeHtml(doc.title) + '</td><td class="px-4 py-3 text-sm text-sub">' + escapeHtml(doc.volume) + '</td><td class="px-4 py-3 text-sm text-sub">' + qCount + '</td><td class="px-4 py-3 text-sm"><a href="' + (isSafeUrl(doc.url) ? escapeAttr(doc.url) : '#') + '" target="_blank" rel="noopener" class="text-gblue hover:underline">Open</a></td><td class="px-4 py-3 text-sm text-right"><button onclick="openEditDoc(\'' + escapeHtml(doc.id) + '\')" class="text-gblue hover:underline mr-2">Edit</button><button onclick="openManageQuiz(\'' + escapeHtml(doc.id) + '\')" class="text-gblue hover:underline mr-2">Quiz</button><button onclick="openConfirmDelete(\'' + escapeHtml(doc.id) + '\')" class="text-gred hover:underline">Delete</button></td>';
     tbody.appendChild(tr);
   }
   refreshIcons();
@@ -917,6 +960,10 @@ function saveDocForm() {
       errorEl.textContent = 'All fields are required.';
       errorEl.classList.remove('hidden');
     }
+    return;
+  }
+  if (!isSafeUrl(url)) {
+    toast('Enter a valid link starting with https://', 'error');
     return;
   }
   if (state.editingDocId) {
