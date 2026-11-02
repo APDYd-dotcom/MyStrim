@@ -1073,31 +1073,31 @@ function openManageQuiz(id) {
   state.manageDocId = id;
   var qmt = document.getElementById('quizManageTitle');
   if (qmt) {
-    qmt.textContent = 'Manage quiz - ' + doc.title;
+    qmt.textContent = doc.title;
   }
-  var qq = document.getElementById('qmQuestion');
+  var qq = document.getElementById('qFormText');
   if (qq) {
     qq.value = '';
   }
-  var o0 = document.getElementById('qmOpt0');
+  var o0 = document.getElementById('qOpt0');
   if (o0) {
     o0.value = '';
   }
-  var o1 = document.getElementById('qmOpt1');
+  var o1 = document.getElementById('qOpt1');
   if (o1) {
     o1.value = '';
   }
-  var o2 = document.getElementById('qmOpt2');
+  var o2 = document.getElementById('qOpt2');
   if (o2) {
     o2.value = '';
   }
-  var o3 = document.getElementById('qmOpt3');
+  var o3 = document.getElementById('qOpt3');
   if (o3) {
     o3.value = '';
   }
-  var radios = document.getElementsByName('qmCorrect');
+  var radios = document.getElementsByName('qCorrect');
   for (var r = 0; r < radios.length; r++) {
-    radios[r].checked = false;
+    radios[r].checked = (r === 0);
   }
   renderQuizManageList(doc);
   openModal('quizManageModal');
@@ -1138,6 +1138,12 @@ function initQuizManageModal() {
       closeModal('quizManageModal');
     });
   }
+  var closeBtns = document.querySelectorAll('[data-close="quizManageModal"]');
+  for (var i = 0; i < closeBtns.length; i++) {
+    closeBtns[i].onclick = function() {
+      closeModal('quizManageModal');
+    };
+  }
   var qmb = document.getElementById('quizManageBackdrop');
   if (qmb) {
     qmb.addEventListener('click', function() {
@@ -1148,6 +1154,13 @@ function initQuizManageModal() {
   if (qmab) {
     qmab.addEventListener('click', addManageQuestion);
   }
+  var qform = document.getElementById('quizQuestionForm');
+  if (qform) {
+    qform.onsubmit = function(e) {
+      e.preventDefault();
+      addManageQuestion();
+    };
+  }
 }
 
 function addManageQuestion() {
@@ -1155,18 +1168,36 @@ function addManageQuestion() {
   if (!doc) {
     return;
   }
-  var qq2 = document.getElementById('qmQuestion');
-  var o02 = document.getElementById('qmOpt0');
-  var o12 = document.getElementById('qmOpt1');
-  var o22 = document.getElementById('qmOpt2');
-  var o32 = document.getElementById('qmOpt3');
+  var qq2 = document.getElementById('qFormText');
+  if (!qq2) {
+    qq2 = document.getElementById('qmQuestion');
+  }
+  var o02 = document.getElementById('qOpt0');
+  if (!o02) {
+    o02 = document.getElementById('qmOpt0');
+  }
+  var o12 = document.getElementById('qOpt1');
+  if (!o12) {
+    o12 = document.getElementById('qmOpt1');
+  }
+  var o22 = document.getElementById('qOpt2');
+  if (!o22) {
+    o22 = document.getElementById('qmOpt2');
+  }
+  var o32 = document.getElementById('qOpt3');
+  if (!o32) {
+    o32 = document.getElementById('qmOpt3');
+  }
   var question = qq2 ? qq2.value.trim() : '';
   var opt0 = o02 ? o02.value.trim() : '';
   var opt1 = o12 ? o12.value.trim() : '';
   var opt2 = o22 ? o22.value.trim() : '';
   var opt3 = o32 ? o32.value.trim() : '';
   var correctIndex = -1;
-  var radios = document.getElementsByName('qmCorrect');
+  var radios = document.getElementsByName('qCorrect');
+  if (radios.length === 0) {
+    radios = document.getElementsByName('qmCorrect');
+  }
   for (var r = 0; r < radios.length; r++) {
     if (radios[r].checked) {
       correctIndex = parseInt(radios[r].value);
@@ -1199,7 +1230,7 @@ function addManageQuestion() {
     o32.value = '';
   }
   for (var r2 = 0; r2 < radios.length; r2++) {
-    radios[r2].checked = false;
+    radios[r2].checked = (r2 === 0);
   }
   var updated = findDocById(doc.id);
   renderQuizManageList(updated);
