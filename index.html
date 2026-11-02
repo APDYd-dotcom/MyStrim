@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MyStrim — Learn from documents, earn coins</title>
+<meta name="description" content="MyStrim: browse media documents, take interactive quizzes, and earn coins." />
+
+<!-- Google Font: Roboto (keeps the type system consistent with a simple, Google-style product) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+
+<!-- Tailwind (Play CDN — no build step needed) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Roboto', 'Arial', 'sans-serif'],
+        },
+        colors: {
+          gblue: '#1A73E8',
+          'gblue-dark': '#1558B0',
+          'gblue-soft': '#E8F0FE',
+          ggreen: '#188038',
+          'ggreen-soft': '#E6F4EA',
+          gred: '#D93025',
+          'gred-soft': '#FCE8E6',
+          gyellow: '#F9AB00',
+          ink: '#202124',
+          sub: '#5F6368',
+          line: '#DADCE0',
+          surface: '#F8F9FA',
+        },
+        borderRadius: {
+          xl2: '14px',
+        }
+      }
+    }
+  }
+</script>
+
+<!-- Lucide icons (modern, minimal line icons) -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="bg-white text-ink font-sans antialiased min-h-screen flex flex-col">
+
+  <!-- Toast container -->
+  <div id="toast" class="fixed top-4 right-4 z-[100] flex flex-col gap-2 items-end pointer-events-none"></div>
+
+  <!-- ============ NAVBAR ============ -->
+  <header id="navbar" class="hidden sticky top-0 z-40 bg-white border-b border-line">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-9 h-9 rounded-full bg-gblue flex items-center justify-center">
+          <i data-lucide="play" class="w-5 h-5 text-white"></i>
+        </div>
+        <span class="text-xl text-ink" style="font-family:'Google Sans','Roboto',sans-serif;">MyStrim</span>
+      </div>
+
+      <nav class="hidden sm:flex items-center gap-1">
+        <button data-nav="user" class="nav-link px-4 py-2 rounded-full text-sm font-medium text-sub hover:bg-surface transition">Documents</button>
+        <button data-nav="admin" id="navAdminBtn" class="nav-link hidden px-4 py-2 rounded-full text-sm font-medium text-sub hover:bg-surface transition">Admin</button>
+      </nav>
+
+      <div class="flex items-center gap-2 sm:gap-3">
+        <div id="coinBadge" class="hidden items-center gap-1.5 bg-surface border border-line rounded-full pl-2 pr-3 py-1.5">
+          <i data-lucide="coins" class="w-4 h-4 text-gyellow"></i>
+          <span id="coinCount" class="text-sm font-medium text-ink">0</span>
+        </div>
+        <div class="hidden sm:flex items-center gap-2 pl-2">
+          <div class="w-8 h-8 rounded-full bg-gblue-soft flex items-center justify-center text-gblue text-sm font-medium" id="userAvatar">U</div>
+          <span id="userName" class="text-sm text-ink font-medium max-w-[120px] truncate"></span>
+        </div>
+        <button id="logoutBtn" class="p-2 rounded-full hover:bg-surface transition" title="Log out">
+          <i data-lucide="log-out" class="w-5 h-5 text-sub"></i>
+        </button>
+      </div>
+    </div>
+    <!-- mobile nav -->
+    <div class="sm:hidden flex border-t border-line">
+      <button data-nav="user" class="nav-link flex-1 py-2.5 text-sm font-medium text-sub">Documents</button>
+      <button data-nav="admin" id="navAdminBtnMobile" class="nav-link hidden flex-1 py-2.5 text-sm font-medium text-sub">Admin</button>
+    </div>
+  </header>
+
+  <main class="flex-1 w-full">
+
+    <!-- ============ AUTH VIEW ============ -->
+    <section id="authView" class="min-h-screen flex items-center justify-center px-4 bg-surface">
+      <div class="w-full max-w-md">
+        <div class="flex flex-col items-center mb-8">
+          <div class="w-14 h-14 rounded-full bg-gblue flex items-center justify-center mb-4">
+            <i data-lucide="play" class="w-7 h-7 text-white"></i>
+          </div>
+          <h1 class="text-2xl text-ink" style="font-family:'Google Sans','Roboto',sans-serif;">MyStrim</h1>
+          <p class="text-sub text-sm mt-1">Learn from documents. Earn coins.</p>
+        </div>
+
+        <div class="bg-white border border-line rounded-xl2 shadow-sm p-6 sm:p-8">
+          <!-- Tabs -->
+          <div class="flex mb-6 border-b border-line">
+            <button id="tabLogin" class="auth-tab flex-1 pb-3 text-sm font-medium text-gblue border-b-2 border-gblue">Log in</button>
+            <button id="tabRegister" class="auth-tab flex-1 pb-3 text-sm font-medium text-sub border-b-2 border-transparent">Create account</button>
+          </div>
+
+          <!-- Login form -->
+          <form id="loginForm" class="space-y-4">
+            <div>
+              <label class="block text-xs font-medium text-sub mb-1.5">Email</label>
+              <input type="email" id="loginEmail" required autocomplete="email"
+                class="w-full px-3.5 py-2.5 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gblue focus:border-gblue" placeholder="you@example.com" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-sub mb-1.5">Password</label>
+              <input type="password" id="loginPassword" required autocomplete="current-password"
+                class="w-full px-3.5 py-2.5 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gblue focus:border-gblue" placeholder="••••••••" />
+            </div>
+            <p id="loginError" class="hidden text-sm text-gred"></p>
+            <button type="submit" class="w-full bg-gblue hover:bg-gblue-dark text-white text-sm font-medium py-2.5 rounded-full transition">Log in</button>
+            <button type="button" id="fillAdminBtn" class="w-full text-xs text-gblue hover:underline py-1">Use default admin credentials</button>
+          </form>
+
+          <!-- Register form -->
+          <form id="registerForm" class="space-y-4 hidden">
+            <div>
+              <label class="block text-xs font-medium text-sub mb-1.5">Full name</label>
+              <input type="text" id="regName" required
+                class="w-full px-3.5 py-2.5 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gblue focus:border-gblue" placeholder="Jane Doe" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-sub mb-1.5">Email</label>
+              <input type="email" id="regEmail" required autocomplete="email"
+                class="w-full px-3.5 py-2.5 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gblue focus:border-gblue" placeholder="you@example.com" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-sub mb-1.5">Password</label>
+              <input type="password" id="regPassword" required minlength="6" autocomplete="new-password"
+                class="w-full px-3.5 py-2.5 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gblue focus:border-gblue" placeholder="At least 6 characters" />
+            </div>
+            <p id="registerError" class="hidden text-sm text-gred"></p>
+            <button type="submit" class="w-full bg-gblue hover:bg-gblue-dark text-white text-sm font-medium py-2.5 rounded-full transition">Create account</button>
+          </form>
+        </div>
+        <p class="text-center text-xs text-sub mt-6">Data is stored locally in this browser only.</p>
+      </div>
+    </section>
+
+    <!-- ============ USER VIEW ============ -->
+    <section id="userView" class="hidden max-w-6xl mx-auto px-4 sm:px-6 py-8">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h2 class="text-2xl text-ink" style="font-family:'Google Sans','Roboto',sans-serif;">Documents</h2>
+          <p class="text-sub text-sm mt-1">Open a document, then take its quiz to earn coins.</p>
+        </div>
+        <div class="relative w-full sm:w-72">
+          <i data-lucide="search" class="w-4 h-4 text-sub absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+          <input id="docSearch" type="text" placeholder="Search documents"
+            class="w-full pl-10 pr-3.5 py-2.5 border border-line rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-gblue focus:border-gblue" />
+        </div>
+      </div>
+
+      <div id="docGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+
+      <div id="docEmptyState" class="hidden flex-col items-center justify-center text-center py-20">
+        <i data-lucide="file-search" class="w-10 h-10 text-sub mb-3"></i>
+        <p class="text-ink font-medium">No documents yet</p>
+        <p class="text-sub text-sm mt-1">Ask an admin to add a document to get started.</p>
+      </div>
+    </section>
+
+    <!-- ============ ADMIN VIEW ============ -->
+    <section id="adminView" class="hidden max-w-6xl mx-auto px-4 sm:px-6 py-8">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h2 class="text-2xl text-ink" style="font-family:'Google Sans','Roboto',sans-serif;">Admin — Documents</h2>
+          <p class="text-sub text-sm mt-1">Add Google documents and build their quizzes.</p>
+        </div>
+        <button id="addDocBtn" class="inline-flex items-center gap-2 bg-gblue hover:bg-gblue-dark text-white text-sm font-medium px-5 py-2.5 rounded-full transition self-start">
+          <i data-lucide="plus" class="w-4 h-4"></i> Add document
+        </button>
+      </div>
+
+      <div class="bg-white border border-line rounded-xl2 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-surface text-left text-xs font-medium text-sub uppercase tracking-wide">
+                <th class="px-5 py-3">Title</th>
+                <th class="px-5 py-3">Volume</th>
+                <th class="px-5 py-3">Quiz</th>
+                <th class="px-5 py-3">URL</th>
+                <th class="px-5 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminDocTableBody" class="divide-y divide-line"></tbody>
+          </table>
+        </div>
+        <div id="adminEmptyState" class="hidden flex-col items-center justify-center text-center py-16">
+          <i data-lucide="folder-plus" class="w-10 h-10 text-sub mb-3 mx-auto"></i>
+          <p class="text-ink font-medium">No documents yet</p>
+          <p class="text-sub text-sm mt-1">Click "Add document" to create the first one.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============ DOCUMENT DETAIL MODAL ============ -->
+  <div id="docModal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl2 w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div class="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-line">
+        <div class="min-w-0">
+          <p id="docModalVolume" class="text-xs font-medium text-gblue uppercase tracking-wide"></p>
+          <h3 id="docModalTitle" class="text-lg font-medium text-ink truncate"></h3>
+        </div>
+        <button data-close="docModal" class="p-2 rounded-full hover:bg-surface shrink-0">
+          <i data-lucide="x" class="w-5 h-5 text-sub"></i>
+        </button>
+      </div>
+      <div class="flex-1 overflow-y-auto bg-surface">
+        <iframe id="docModalFrame" class="w-full h-[50vh] sm:h-[60vh] bg-white" src="" title="Document preview"></iframe>
+      </div>
+      <div class="px-5 sm:px-6 py-4 border-t border-line flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <a id="docModalOpenLink" href="#" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-1.5 text-sm text-gblue font-medium hover:underline">
+          <i data-lucide="external-link" class="w-4 h-4"></i> Open in new tab
+        </a>
+        <button id="docModalQuizBtn" class="inline-flex items-center justify-center gap-2 bg-gblue hover:bg-gblue-dark text-white text-sm font-medium px-5 py-2.5 rounded-full transition">
+          <i data-lucide="brain" class="w-4 h-4"></i> Take the quiz
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ QUIZ MODAL ============ -->
+  <div id="quizModal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl2 w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div class="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-line">
+        <h3 id="quizModalTitle" class="text-base font-medium text-ink truncate">Quiz</h3>
+        <button data-close="quizModal" class="p-2 rounded-full hover:bg-surface shrink-0">
+          <i data-lucide="x" class="w-5 h-5 text-sub"></i>
+        </button>
+      </div>
+
+      <!-- progress bar -->
+      <div class="h-1.5 bg-surface w-full">
+        <div id="quizProgressBar" class="h-full bg-gblue transition-all duration-300" style="width:0%"></div>
+      </div>
+
+      <!-- No quiz state -->
+      <div id="quizNoneState" class="hidden flex-col items-center justify-center text-center py-16 px-6">
+        <i data-lucide="clipboard-x" class="w-10 h-10 text-sub mb-3"></i>
+        <p class="text-ink font-medium">No quiz yet</p>
+        <p class="text-sub text-sm mt-1">An admin hasn't added quiz questions for this document.</p>
+      </div>
+
+      <!-- Question state -->
+      <div id="quizQuestionState" class="hidden flex-col px-5 sm:px-6 py-6 overflow-y-auto">
+        <p id="quizQuestionCounter" class="text-xs font-medium text-sub uppercase tracking-wide mb-2">Question 1 of 5</p>
+        <p id="quizQuestionText" class="text-lg font-medium text-ink mb-5">Question text goes here</p>
+        <div id="quizOptions" class="flex flex-col gap-2.5"></div>
+        <button id="quizNextBtn" class="hidden mt-6 self-end bg-gblue hover:bg-gblue-dark text-white text-sm font-medium px-6 py-2.5 rounded-full transition">
+          Next
+        </button>
+      </div>
+
+      <!-- Results state -->
+      <div id="quizResultState" class="hidden flex-col items-center text-center px-6 py-10">
+        <div id="quizResultIconWrap" class="w-16 h-16 rounded-full flex items-center justify-center mb-4">
+          <i id="quizResultIcon" data-lucide="trophy" class="w-8 h-8"></i>
+        </div>
+        <p id="quizResultScore" class="text-3xl font-bold text-ink" style="font-family:'Google Sans','Roboto',sans-serif;">0%</p>
+        <p id="quizResultLabel" class="text-sub text-sm mt-1">You got 0 of 0 correct</p>
+        <div id="quizResultCoins" class="hidden mt-4 inline-flex items-center gap-1.5 bg-ggreen-soft text-ggreen font-medium text-sm px-4 py-2 rounded-full">
+          <i data-lucide="coins" class="w-4 h-4"></i>
+          <span>+20 coins earned</span>
+        </div>
+        <p id="quizResultRetryNote" class="hidden text-xs text-sub mt-4">You need 80% to earn coins. Give it another try!</p>
+        <div class="flex gap-3 mt-8 w-full">
+          <button id="quizRetryBtn" class="flex-1 border border-line hover:bg-surface text-ink text-sm font-medium py-2.5 rounded-full transition">Retake quiz</button>
+          <button id="quizDoneBtn" class="flex-1 bg-gblue hover:bg-gblue-dark text-white text-sm font-medium py-2.5 rounded-full transition">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ADMIN: ADD/EDIT DOCUMENT MODAL ============ -->
+  <div id="docFormModal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl2 w-full max-w-md overflow-hidden">
+      <div class="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-line">
+        <h3 id="docFormTitle" class="text-base font-medium text-ink">Add document</h3>
+        <button data-close="docFormModal" class="p-2 rounded-full hover:bg-surface">
+          <i data-lucide="x" class="w-5 h-5 text-sub"></i>
+        </button>
+      </div>
+      <form id="docForm" class="px-5 sm:px-6 py-5 space-y-4">
+        <input type="hidden" id="docFormId" />
+        <div>
+          <label class="block text-xs font-medium text-sub mb-1.5">Title</label>
+          <input type="text" id="docFormTitleInput" required
+            class="w-full px-3.5 py-2.5 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gblue focus:border-gblue" placeholder="e.g. Media Industry Report" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-sub mb-1.5">Google Document URL</label>
+          <input type="url" id="docFormUrl" required
+            class="w-full px-3.5 py-2.5 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gblue focus:border-gblue" placeholder="https://docs.google.com/document/d/..." />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-sub mb-1.5">Volume</label>
+          <input type="number" id="docFormVolume" required min="1"
+            class="w-full px-3.5 py-2.5 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gblue focus:border-gblue" placeholder="1" />
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" data-close="docFormModal" class="flex-1 border border-line hover:bg-surface text-ink text-sm font-medium py-2.5 rounded-full transition">Cancel</button>
+          <button type="submit" class="flex-1 bg-gblue hover:bg-gblue-dark text-white text-sm font-medium py-2.5 rounded-full transition">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============ ADMIN: MANAGE QUIZ MODAL ============ -->
+  <div id="quizManageModal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl2 w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div class="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-line">
+        <div>
+          <p class="text-xs font-medium text-sub uppercase tracking-wide">Manage quiz</p>
+          <h3 id="quizManageTitle" class="text-base font-medium text-ink truncate">Document title</h3>
+        </div>
+        <button data-close="quizManageModal" class="p-2 rounded-full hover:bg-surface">
+          <i data-lucide="x" class="w-5 h-5 text-sub"></i>
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto px-5 sm:px-6 py-5">
+        <div id="quizManageList" class="space-y-3 mb-6"></div>
+        <div id="quizManageEmpty" class="hidden text-center py-8">
+          <p class="text-sub text-sm">No questions yet. Add the first one below.</p>
+        </div>
+
+        <div class="border-t border-line pt-5">
+          <p class="text-sm font-medium text-ink mb-3">Add a question</p>
+          <form id="quizQuestionForm" class="space-y-3">
+            <input type="text" id="qFormText" required placeholder="Question text"
+              class="w-full px-3.5 py-2.5 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gblue focus:border-gblue" />
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="flex items-center gap-2">
+                <input type="radio" name="qCorrect" value="0" checked class="accent-gblue" />
+                <input type="text" id="qOpt0" required placeholder="Option A"
+                  class="flex-1 px-3.5 py-2.5 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gblue focus:border-gblue" />
+              </div>
+              <div class="flex items-center gap-2">
+                <input type="radio" name="qCorrect" value="1" class="accent-gblue" />
+                <input type="text" id="qOpt1" required placeholder="Option B"
+                  class="flex-1 px-3.5 py-2.5 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gblue focus:border-gblue" />
+              </div>
+              <div class="flex items-center gap-2">
+                <input type="radio" name="qCorrect" value="2" class="accent-gblue" />
+                <input type="text" id="qOpt2" required placeholder="Option C"
+                  class="flex-1 px-3.5 py-2.5 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gblue focus:border-gblue" />
+              </div>
+              <div class="flex items-center gap-2">
+                <input type="radio" name="qCorrect" value="3" class="accent-gblue" />
+                <input type="text" id="qOpt3" required placeholder="Option D"
+                  class="flex-1 px-3.5 py-2.5 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gblue focus:border-gblue" />
+              </div>
+            </div>
+            <p class="text-xs text-sub">Select the radio button next to the correct option.</p>
+            <button type="submit" class="inline-flex items-center gap-2 bg-gblue hover:bg-gblue-dark text-white text-sm font-medium px-5 py-2.5 rounded-full transition">
+              <i data-lucide="plus" class="w-4 h-4"></i> Add question
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ GENERIC CONFIRM MODAL ============ -->
+  <div id="confirmModal" class="hidden fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl2 w-full max-w-sm p-6">
+      <div class="flex items-center gap-3 mb-2">
+        <div class="w-10 h-10 rounded-full bg-gred-soft flex items-center justify-center shrink-0">
+          <i data-lucide="alert-triangle" class="w-5 h-5 text-gred"></i>
+        </div>
+        <h3 id="confirmTitle" class="text-base font-medium text-ink">Are you sure?</h3>
+      </div>
+      <p id="confirmMessage" class="text-sm text-sub mb-6 ml-[52px]">This action cannot be undone.</p>
+      <div class="flex gap-3">
+        <button id="confirmCancelBtn" class="flex-1 border border-line hover:bg-surface text-ink text-sm font-medium py-2.5 rounded-full transition">Cancel</button>
+        <button id="confirmOkBtn" class="flex-1 bg-gred hover:bg-red-700 text-white text-sm font-medium py-2.5 rounded-full transition">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
