@@ -14,7 +14,7 @@ if (typeof localStorage === 'undefined') {
       delete _mystrim_ls[key];
     },
     clear: function() {
-      _mystrim_ls = {};
+      _mystrim_ls = {}; 
     }
   };
 }

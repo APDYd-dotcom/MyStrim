@@ -78,7 +78,7 @@ function closeModal(id) {
   if (!anyOpen) {
     document.body.style.overflow = '';
   }
-}
+} 
 
 function toast(message, type) {
   if (type === undefined) {
@@ -345,22 +345,16 @@ function initAuth() {
       var rn = document.getElementById('regName');
       var re = document.getElementById('regEmail');
       var rp = document.getElementById('regPassword');
-      var rc = document.getElementById('regConfirm');
       var name = rn ? rn.value.trim() : '';
       var email = re ? re.value.trim() : '';
       var password = rp ? rp.value : '';
-      var confirm = rc ? rc.value : '';
       hideError('registerError');
-      if (name === '' || email === '' || password === '' || confirm === '') {
+      if (name === '' || email === '' || password === '') {
         showError('registerError', 'All fields are required.');
         return;
       }
       if (password.length < 6) {
         showError('registerError', 'Password must be at least 6 characters.');
-        return;
-      }
-      if (password !== confirm) {
-        showError('registerError', 'Passwords do not match.');
         return;
       }
       if (findUserByEmail(email)) {
